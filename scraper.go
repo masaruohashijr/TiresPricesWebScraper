@@ -12,13 +12,15 @@ import (
 var driver *agouti.WebDriver
 
 type Tire struct {
-	Name     string
-	Width    string
-	Profile  string
-	Diameter string
-	Model    string
-	Price    string
-	Rebate   string
+	Name        string
+	Width       string
+	Profile     string
+	Diameter    string
+	Model       string
+	Price       string
+	Rebate      string
+	Xl          string
+	SpeedRating string
 }
 
 var comMap map[string]map[string]map[string][]Tire
@@ -90,7 +92,6 @@ func main() {
 				opt.Click()
 				time.Sleep(500 * time.Millisecond)
 				searchButton := page.FindByClass("tires-search-form-buttons")
-				println(searchButton.Text())
 				searchButton.Click()
 				time.Sleep(1 * time.Second)
 				// Scrap Tires Prices.
@@ -126,23 +127,49 @@ func scrapTires(page *agouti.Page) (tires []Tire) {
 	*/
 	//<span id="item_price_19016" class="header_value_price">173.36$</span>
 	pos := strings.Index(html, "<span class=\"produits_list_item_header_b\">")
-	println("scrapTires")
+	cursor := 0
 	for pos > -1 {
 		snippet := html[pos:]
 		posAng := strings.Index(snippet, ">")
-		fmt.Printf("posAng %d", posAng)
+		cursor += posAng
 		snippet = snippet[posAng+1:]
 		openAng := strings.Index(snippet, "<")
-		fmt.Printf("openAng %d\n", openAng)
+		cursor += openAng
 		name := snippet[:openAng]
 		fmt.Printf("Name: %s\n", name)
+		// Speed Rating
+		posSR := strings.Index(snippet, "speed-ratings")
+		cursor += posSR
+		snippet = snippet[posSR:]
+		posAng = strings.Index(snippet, ">")
+		cursor += posAng
+		snippet = snippet[posAng+1:]
+		openAng = strings.Index(snippet, "<")
+		speedRating := snippet[:openAng]
+		cursor += openAng
+		fmt.Printf("SR: %s\n", speedRating)
+		// Price
+		posPrice := strings.Index(snippet, "class=\"header_value_price\">")
+		cursor += posPrice
+		snippet = snippet[posPrice:]
+		posAng = strings.Index(snippet, ">")
+		cursor += posAng
+		snippet = snippet[posAng+1:]
+		openAng = strings.Index(snippet, "<")
+		price := snippet[:openAng]
+		cursor += openAng
+		fmt.Printf("Price: %s\n", price)
+		// <span class="speed-ratings">
 		tire := Tire{
-			Name: name,
+			Name:        name,
+			Price:       price,
+			SpeedRating: speedRating,
 		}
 		tires = append(tires, tire)
 		pos = strings.Index(snippet, "<span class=\"produits_list_item_header_b\">")
+		html = html[cursor:]
 	}
-	return nil
+	return tires
 }
 
 func extract(html string, stop string) (snippet string) {
