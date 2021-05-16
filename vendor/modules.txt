@@ -1,0 +1,10 @@
+# github.com/onsi/gomega v1.12.0
+## explicit
+# github.com/sclevine/agouti v3.0.0+incompatible
+## explicit
+github.com/sclevine/agouti
+github.com/sclevine/agouti/api
+github.com/sclevine/agouti/api/internal/bus
+github.com/sclevine/agouti/api/internal/service
+github.com/sclevine/agouti/internal/element
+github.com/sclevine/agouti/internal/target
