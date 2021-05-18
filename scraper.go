@@ -1,6 +1,8 @@
 package main
 
 import (
+	c "4tiresWebScraper/config"
+	m "4tiresWebScraper/models"
 	"fmt"
 	"log"
 	"strings"
@@ -11,27 +13,17 @@ import (
 
 var driver *agouti.WebDriver
 
-type Tire struct {
-	Name        string
-	Width       string
-	Profile     string
-	Diameter    string
-	Model       string
-	Price       string
-	Rebate      string
-	Xl          string
-	SpeedRating string
-}
-
-var comMap map[string]map[string]map[string][]Tire
+var taxonomy m.Taxonomy
 
 func main() {
 	StartDriver()
 	page, err := driver.NewPage()
+	c.InitConfig()
+	tiresCfg := c.ReadConfig()
 	if err != nil {
 		log.Fatal("Failed to open page:", err)
 	}
-	if err := page.Navigate("https://www.4tires.ca/summer-tires"); err != nil {
+	if err := page.Navigate(tiresCfg.TiresPricesURL); err != nil {
 		log.Fatal("Failed to navigate:", err)
 	}
 	time.Sleep(1 * time.Second)
@@ -48,6 +40,10 @@ func main() {
 	widthIDs := GetAllOptionsIds(html)
 
 	for i := 0; i < len(widthIDs); i++ {
+		if i > 0 {
+			html, _ := page.HTML()
+			widthIDs = GetAllOptionsIds(html)
+		}
 		println("********WIDTH*********")
 		v := widthIDs[i]
 		opt := page.FindByID(v)
@@ -96,6 +92,8 @@ func main() {
 				time.Sleep(1 * time.Second)
 				// Scrap Tires Prices.
 				tires := scrapTires(page)
+				page.Back()
+				time.Sleep(1 * time.Second)
 				optsD := make(map[string][]Tire)
 				optsD[optionD] = tires
 				optsP := make(map[string]map[string][]Tire)
@@ -104,10 +102,7 @@ func main() {
 				optsW[optionW] = optsP
 			}
 		}
-		// Repeat all over again.
-		if true {
-			break
-		}
+		fWidth = page.FindByID(fields["WIDTH"])
 		fWidth.Click()
 		time.Sleep(1 * time.Second)
 	}
@@ -127,8 +122,9 @@ func scrapTires(page *agouti.Page) (tires []Tire) {
 	*/
 	//<span id="item_price_19016" class="header_value_price">173.36$</span>
 	pos := strings.Index(html, "<span class=\"produits_list_item_header_b\">")
-	cursor := 0
 	for pos > -1 {
+		cursor := 0
+		fmt.Printf("\nposicao %d: ", pos)
 		snippet := html[pos:]
 		posAng := strings.Index(snippet, ">")
 		cursor += posAng
@@ -136,6 +132,7 @@ func scrapTires(page *agouti.Page) (tires []Tire) {
 		openAng := strings.Index(snippet, "<")
 		cursor += openAng
 		name := snippet[:openAng]
+		fmt.Println("=============================")
 		fmt.Printf("Name: %s\n", name)
 		// Speed Rating
 		posSR := strings.Index(snippet, "speed-ratings")
@@ -158,7 +155,7 @@ func scrapTires(page *agouti.Page) (tires []Tire) {
 		openAng = strings.Index(snippet, "<")
 		price := snippet[:openAng]
 		cursor += openAng
-		fmt.Printf("Price: %s\n", price)
+		fmt.Printf("\nPrice: %s\n", price)
 		// <span class="speed-ratings">
 		tire := Tire{
 			Name:        name,
@@ -166,8 +163,10 @@ func scrapTires(page *agouti.Page) (tires []Tire) {
 			SpeedRating: speedRating,
 		}
 		tires = append(tires, tire)
-		pos = strings.Index(snippet, "<span class=\"produits_list_item_header_b\">")
-		html = html[cursor:]
+		fmt.Printf("\ncursor %d: ", cursor)
+		html = html[pos+cursor:]
+		fmt.Printf("\nHTML: %s", html[0:100])
+		pos = strings.Index(html, "<span class=\"produits_list_item_header_b\">")
 	}
 	return tires
 }
